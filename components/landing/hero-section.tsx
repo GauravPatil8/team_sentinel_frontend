@@ -24,9 +24,9 @@ export function HeroSection() {
             <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
               Print documents{" "}
               <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                securely
+                securely 
               </span>
-              , anywhere
+              , with Sentinel
             </h1>
             <p className="max-w-[600px] text-muted-foreground md:text-xl">
               Connect with local print shops and get your documents printed with just a few clicks. Your files are
@@ -58,7 +58,7 @@ export function HeroSection() {
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/5 rounded-2xl transform rotate-3"></div>
             <Image
-              src="https://thumbs.dreamstime.com/b/thumbs-up-printer-character-cartoon-style-vector-illustration-thumbs-up-printer-character-cartoon-style-107416699.jpg"
+              src="https://img.freepik.com/free-vector/flat-background-safer-internet-day_23-2151127503.jpg?t=st=1742306603~exp=1742310203~hmac=082530ef146442c7113bc1f80824a46d610728b17b0d5665ced8e78ad53bc6cc&w=996"
               alt="Person picking up printed documents"
               fill
               className="object-cover rounded-2xl shadow-xl transform -rotate-3 transition-transform hover:rotate-0 duration-500"

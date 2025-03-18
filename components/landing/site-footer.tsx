@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div className="flex items-center gap-2">
           <Printer className="h-5 w-5 text-primary" />
           <span className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            PrintConnect
+            Sentinel
           </span>
         </div>
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 text-sm">

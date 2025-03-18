@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Shield, Star } from "lucide-react"
 import { CustomerFlowchart } from "@/components/landing/customer-flowchart"
+import { ShopkeeperFlowchart } from "@/components/landing/shopkeeper-flowchart" // Add the import for ShopkeeperFlowchart
 
 export function BenefitsSection() {
   return (
@@ -70,6 +71,34 @@ export function BenefitsSection() {
                 <div>
                   <h4 className="text-lg font-semibold">Save Time</h4>
                   <p className="text-muted-foreground">No more waiting in lines or dealing with printer issues</p>
+                </div>
+              </li>
+              {/* New Benefit for Customers */}
+              <li className="flex items-start gap-4 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-5 w-5 text-primary"
+                  >
+                    <path d="M12 2v4" />
+                    <path d="M12 18v4" />
+                    <path d="m4.93 4.93 2.83 2.83" />
+                    <path d="m16.24 16.24 2.83 2.83" />
+                    <path d="M2 12h4" />
+                    <path d="M18 12h4" />
+                    <path d="m4.93 19.07 2.83-2.83" />
+                    <path d="m16.24 7.76 2.83-2.83" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold">No Hidden Fees</h4>
+                  <p className="text-muted-foreground">Transparent pricing, no surprises when you pay</p>
                 </div>
               </li>
             </ul>
@@ -181,20 +210,11 @@ export function BenefitsSection() {
               </li>
             </ul>
 
-            {/* Image placeholder for shopkeeper workflow */}
-            <div className="mt-6 rounded-xl overflow-hidden shadow-md bg-muted/30 h-[300px] flex items-center justify-center">
-              <div className="text-center p-4">
-                <h4 className="text-lg font-medium mb-2">Shopkeeper Workflow</h4>
-                <p className="text-sm text-muted-foreground mb-4">Visualization of the print shop management process</p>
-                <div className="text-xs text-muted-foreground">
-                  Place shopkeeper workflow image here (public/images/shopkeeper-workflow.png)
-                </div>
-              </div>
-            </div>
+            {/* Shopkeeper Flowchart */}
+            <ShopkeeperFlowchart />
           </motion.div>
         </div>
       </div>
     </section>
   )
 }
-

@@ -5,7 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 export function FaqSection() {
   return (
-    <section id="pricing" className="w-full py-12 md:py-24 lg:py-32 bg-white">
+    <section id="faq" className="w-full py-12 md:py-24 lg:py-32 bg-white">
       <div className="container px-4 md:px-6">
         <motion.div
           className="flex flex-col items-center justify-center space-y-4 text-center"
@@ -26,53 +26,55 @@ export function FaqSection() {
           transition={{ duration: 0.6 }}
         >
           <Accordion type="single" collapsible className="w-full">
+            {/* Question 1 */}
             <AccordionItem value="item-1" className="border rounded-lg p-2 mb-4 shadow-sm">
               <AccordionTrigger className="hover:no-underline">
-                How much does it cost to use PrintConnect?
+                Why is document security important when printing at a local shop?
               </AccordionTrigger>
               <AccordionContent>
-                PrintConnect is free to use for customers. You only pay for the printing services you use, with prices
-                set by individual print shops. For shopkeepers, we charge a small commission on each transaction.
+                When you print documents at a local print shop, there's a risk that your personal or confidential information could be exposed. Print shops often store documents in their systems temporarily, which can lead to data theft or unauthorized access. Sentinel ensures that your documents are encrypted, keeping your information secure throughout the process.
               </AccordionContent>
             </AccordionItem>
+
+            {/* Question 2 */}
             <AccordionItem value="item-2" className="border rounded-lg p-2 mb-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline">What file formats are supported?</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline">How does Sentinel protect my documents?</AccordionTrigger>
               <AccordionContent>
-                We support all common document formats including PDF, DOCX, XLSX, PPTX, JPG, PNG, and many more. If you
-                have a specific format not listed, please contact us.
+                Sentinel uses end-to-end encryption for your documents, ensuring that they are secure from the moment you upload them until they are printed. Only authorized print shops can access your documents, and once printing is complete, access is automatically revoked.
               </AccordionContent>
             </AccordionItem>
+
+            {/* Question 3 */}
             <AccordionItem value="item-3" className="border rounded-lg p-2 mb-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline">How do I know my documents are secure?</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline">What happens to my documents once they are printed?</AccordionTrigger>
               <AccordionContent>
-                We take security seriously. All documents are encrypted during upload and storage. Print shops can only
-                access your documents after you've selected them for printing, and access is automatically revoked after
-                printing is complete. Our encryption ensures that even if someone intercepts your files, they cannot
-                read the contents.
+                After printing, your documents are permanently deleted from the system to ensure no sensitive data is stored unnecessarily. This minimizes the risk of any misuse or data leak.
               </AccordionContent>
             </AccordionItem>
+
+            {/* Question 4 */}
             <AccordionItem value="item-4" className="border rounded-lg p-2 mb-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline">Can I get my documents delivered?</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline">Are my documents safe when sending them via messaging apps like WhatsApp?</AccordionTrigger>
               <AccordionContent>
-                Yes, some print shops offer delivery services. You can see which shops offer delivery when browsing
-                nearby locations, along with any associated delivery fees.
+                When sharing documents through messaging apps like WhatsApp, there's a risk that your phone number and document details can be harvested by third parties. This could lead to spam calls or data misuse. Sentinel ensures that all your documents remain encrypted and secure, even if shared through messaging platforms.
               </AccordionContent>
             </AccordionItem>
+
+            {/* Question 5 */}
             <AccordionItem value="item-5" className="border rounded-lg p-2 mb-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline">How do I become a print shop partner?</AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline">Can I print my documents securely on the go?</AccordionTrigger>
               <AccordionContent>
-                Simply sign up as a shopkeeper on our platform. You'll need to provide details about your shop, services
-                offered, and complete a verification process. Once approved, you can start receiving print jobs.
+                Yes, Sentinel allows you to securely print documents from anywhere, even when you're traveling. Our platform ensures that your documents are protected, regardless of where you are, so you can print with peace of mind.
               </AccordionContent>
             </AccordionItem>
+
+            {/* Question 6 */}
             <AccordionItem value="item-6" className="border rounded-lg p-2 mb-4 shadow-sm">
               <AccordionTrigger className="hover:no-underline">
-                What paper types and sizes are available?
+                How can I trust that print shops are handling my documents securely?
               </AccordionTrigger>
               <AccordionContent>
-                Available paper types and sizes vary by print shop, but typically include A4, Legal, Letter, A3, and
-                more, in various weights and finishes (matte, glossy, etc.). You can select your preferences when
-                placing an order.
+                Print shops that partner with Sentinel undergo a thorough verification process to ensure they meet our security standards. Only authorized shops with the right encryption protocols can access your documents, reducing the risk of data misuse.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -81,4 +83,3 @@ export function FaqSection() {
     </section>
   )
 }
-

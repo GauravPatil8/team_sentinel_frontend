@@ -21,7 +21,7 @@ export function CtaSection() {
               Ready to start printing securely?
             </h2>
             <p className="mx-auto max-w-[700px] md:text-xl">
-              Join thousands of users who are already enjoying the convenience and security of PrintConnect.
+              Start using Sentinel for the convenience and security of your documents.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 mt-6">
