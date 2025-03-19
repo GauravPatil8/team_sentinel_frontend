@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useRef, Dispatch, SetStateAction } from "react"
+import { useEffect,useState, useRef, Dispatch, SetStateAction } from "react"
 import Image from "next/image"
-import { X, Upload, Shield } from "lucide-react"
+import { X, Upload, Shield, MapPin } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { encryptFile } from "../../utils/encrypt"; // ✅ Fix import
 import { printRequestApi } from "@/lib/api"
+import { usePrintRequest } from "@/lib/printRequestContext";
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -24,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { v4 as uuidv4 } from "uuid"
+
 
 interface FileSettings {
   copies: number
@@ -60,110 +63,194 @@ const defaultFileSettings: FileSettings = {
   pages: "all"
 }
 
-export function UploadDialog({
-  open,
-  onOpenChange,
-  selectedFiles,
-  setSelectedFiles,
-}: UploadDialogProps) {
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { user } = useAuth()
+export function UploadDialog({ open, onOpenChange, selectedFiles, setSelectedFiles }: UploadDialogProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [nearbyShops, setNearbyShops] = useState<{ id: string; shopName: string }[]>([]);
+  const [selectedShop, setSelectedShop] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { getNearbyShops } = usePrintRequest();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) {
-      const filesArray: SelectedFile[] = Array.from(e.target.files).map(file => ({
-        id: uuidv4(),
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
-        file: file,
-        settings: { ...defaultFileSettings }
-      }))
-      setSelectedFiles(filesArray)
+  useEffect(() => {
+    if (open && user) {
+      fetchNearbyShops();
     }
-  }
+  }, [open, user]);
 
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault()
+  const fetchNearbyShops = async () => {
+    if (!user?.id) {
+      setError("User not authenticated.");
+      return;
+    }
+  
+    try {
+      // Simulate getting user location dynamically
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+          console.log("Fetching shops for location:", location);
+  
+          const shops = await getNearbyShops(location, user.token);
+          console.log("Shops fetched:", shops);
+  
+          if (!shops || shops.length === 0) {
+            setError("No nearby shops found.");
+            return;
+          }
+  
+          setNearbyShops(shops);
+        },
+        (error) => {
+          setError("Failed to get user location.");
+          console.error(error);
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching nearby shops:", error);
+      setError("Failed to fetch nearby shops.");
+    }
+  };
+  
+  
+  
+
+  
+
+  const encryptSelectedFiles = async (): Promise<
+  { id: string; name: string; encryptedData: ArrayBuffer }[]
+> => {
+  return await Promise.all(
+    selectedFiles.map(async (file) => {
+      const encrypted = await encryptFile(file.file);
+      return { id: file.id, name: file.name, encryptedData: encrypted.encryptedData };
+    })
+  );
+};
+
+
+const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files?.length) {
+    const filesArray: SelectedFile[] = Array.from(e.target.files).map((file) => ({
+      id: uuidv4(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+      file: file,
+      settings: {
+        paperSize: "a4", // Default paper size
+        orientation: "portrait", // Default orientation
+        color: "bw", // Default print type
+        doubleSided: false, // Default double-sided setting
+        pages: "all", // Default pages
+        copies: 1, // Default copy count
+      },
+    }));
+    setSelectedFiles(filesArray);
+  }
+};
+
+const handleShopSelect = (newValue: string) => {
+  console.log("Selected Shop:", newValue); // Debugging
+  setSelectedShop(newValue); // Update the selected shop
+};
+
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (e.dataTransfer.files.length > 0) {
-      const filesArray: SelectedFile[] = Array.from(e.dataTransfer.files).map(file => ({
+      const filesArray: SelectedFile[] = Array.from(e.dataTransfer.files).map((file) => ({
         id: uuidv4(),
         name: file.name,
         size: file.size,
         type: file.type,
         preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
         file: file,
-        settings: { ...defaultFileSettings }
-      }))
-      setSelectedFiles(filesArray)
+        settings: {
+          paperSize: "a4", 
+          orientation: "portrait", 
+          color: "bw", 
+          doubleSided: false, 
+          pages: "all", 
+          copies: 1, 
+        },
+      }));
+      setSelectedFiles(filesArray);
     }
-  }
+  };
+  
 
   const updateFileSettings = (fileId: string, key: keyof FileSettings, value: any) => {
-    setSelectedFiles(prevFiles => 
-      prevFiles.map(file => 
+    setSelectedFiles((prevFiles) =>
+      prevFiles.map((file) =>
         file.id === fileId ? { ...file, settings: { ...file.settings, [key]: value } } : file
       )
-    )
-  }
+    );
+  };
 
   const removeFile = (fileId: string) => {
-    setSelectedFiles(prevFiles => 
-      prevFiles.filter(file => file.id !== fileId)
-    )
-  }
+    setSelectedFiles((prevFiles) => prevFiles.filter((file) => file.id !== fileId));
+  };
 
   const handleUpload = async () => {
-    if (selectedFiles.length === 0 || !user) return
+    if (!user) {
+      setError("User not authenticated.");
+      return;
+    }
+    if (!selectedShop) {
+      setError("Please select a print shop before uploading.");
+      return;
+    }
 
-    setIsUploading(true)
-    setError(null)
+    setIsUploading(true);
+    setError(null);
 
     try {
+      const encryptedFiles = await encryptSelectedFiles();
+
       await printRequestApi.createPrintRequest(
         {
           customerId: user.id,
-          shopkeeperId: "",
-          encryptedFiles: selectedFiles.map(file => file.name),
-          fileNames: selectedFiles.map(file => file.name),
+          shopkeeperId: selectedShop,
+          encryptedFiles: encryptedFiles.map((file) => file.encryptedData),
+          fileNames: encryptedFiles.map((file) => file.name),
           pages: "all",
-          copies: 1
+          copies: 1,
+          aesKey: "",
+          aesIv: ""
         },
         user.token
-      )
+      );
 
       const interval = setInterval(() => {
-        setUploadProgress(prev => {
+        setUploadProgress((prev) => {
           if (prev >= 100) {
-            clearInterval(interval)
+            clearInterval(interval);
             setTimeout(() => {
-              setIsUploading(false)
-              onOpenChange(false)
-              setSelectedFiles([])
-            }, 500)
-            return 100
+              setIsUploading(false);
+              onOpenChange(false);
+              setSelectedFiles([]);
+            }, 500);
+            return 100;
           }
-          return prev + 5
-        })
-      }, 200)
+          return prev + 5;
+        });
+      }, 200);
     } catch (err) {
-      setError("Failed to upload files. Please try again.")
-      setIsUploading(false)
+      setError("Failed to upload files. Please try again.");
+      setIsUploading(false);
     }
-  }
+  };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / 1048576).toFixed(1)} MB`
-  }
-
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
+  };
+  
   const FilePreview = ({ file }: { file: SelectedFile }) => (
     <div className="relative h-40 w-full">
       {file.type.startsWith("image/") ? (
@@ -182,24 +269,62 @@ export function UploadDialog({
         </div>
       )}
     </div>
-  )
-
+  );
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+      <DialogContent className="sm:max-w-[800px] overflow-y-auto max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Upload Documents</DialogTitle>
           <DialogDescription>
             Upload your documents securely. All files are encrypted end-to-end.
           </DialogDescription>
         </DialogHeader>
-
+  
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+  
+       {/* ✅ NEW: Select Nearby Print Shop */}
+<div className="space-y-4">
+  <label className="flex items-center gap-2">
+    <MapPin className="w-5 h-5 text-primary" />
+    Select Nearby Print Shop
+  </label>
+  
+  {/* The Select component */}
+  <Select value={selectedShop || ""} onValueChange={handleShopSelect}>
+  <SelectTrigger>
+    <SelectValue placeholder="Choose a print shop" />
+  </SelectTrigger>
 
+  <SelectContent>
+    {nearbyShops.map((shop, index) => (
+      <SelectItem key={shop.id || index} value={shop.id}>
+        {shop.shopName}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
+
+
+
+{selectedShop && (
+  <p className="text-sm text-muted-foreground mt-2">
+    Selected Print Shop: {nearbyShops.find((shop) => shop.id === selectedShop)?.shopName}
+  </p>
+)}
+
+</div>
+{/* ✅ END */}
+
+
+
+
+  
         {!isUploading ? (
           <>
             <div
@@ -225,7 +350,7 @@ export function UploadDialog({
                 </p>
               </div>
             </div>
-
+  
             {selectedFiles.length > 0 && (
               <Accordion type="multiple" className="w-full mt-4">
                 {selectedFiles.map((file) => (
@@ -266,14 +391,14 @@ export function UploadDialog({
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-
+  
                     <AccordionContent>
                       <Tabs defaultValue="settings" className="mt-4">
                         <TabsList className="grid w-full grid-cols-2">
                           <TabsTrigger value="settings">Settings</TabsTrigger>
                           <TabsTrigger value="preview">Preview</TabsTrigger>
                         </TabsList>
-
+  
                         <TabsContent value="settings">
                           <div className="space-y-4 mt-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -296,7 +421,7 @@ export function UploadDialog({
                                   </SelectContent>
                                 </Select>
                               </div>
-
+  
                               <div className="space-y-2">
                                 <Label>Orientation</Label>
                                 <RadioGroup
@@ -317,7 +442,7 @@ export function UploadDialog({
                                 </RadioGroup>
                               </div>
                             </div>
-
+  
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label>Print Type</Label>
@@ -338,7 +463,7 @@ export function UploadDialog({
                                   </div>
                                 </RadioGroup>
                               </div>
-
+  
                               <div className="space-y-2">
                                 <Label>Copies</Label>
                                 <div className="flex items-center gap-4">
@@ -360,7 +485,7 @@ export function UploadDialog({
                                 </div>
                               </div>
                             </div>
-
+  
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <Label>Double-sided printing</Label>
@@ -372,7 +497,7 @@ export function UploadDialog({
                                 />
                               </div>
                             </div>
-
+  
                             <div className="space-y-2">
                               <Label>Pages to print</Label>
                               <Input
@@ -386,7 +511,7 @@ export function UploadDialog({
                             </div>
                           </div>
                         </TabsContent>
-
+  
                         <TabsContent value="preview">
                           <div className="mt-4 border rounded-lg p-4">
                             <FilePreview file={file} />
@@ -398,7 +523,7 @@ export function UploadDialog({
                 ))}
               </Accordion>
             )}
-
+  
             <DialogFooter className="flex justify-between mt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Shield className="h-4 w-4 text-primary" />
@@ -417,27 +542,16 @@ export function UploadDialog({
           </>
         ) : (
           <div className="py-8 space-y-6">
-            <div className="flex flex-col items-center justify-center text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Shield className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium">Encrypting and uploading your documents</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                Your files are being encrypted and securely uploaded. This ensures your sensitive
-                information remains private.
-              </p>
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold">Uploading...</span>
+              <Button variant="ghost" size="sm" onClick={handleUpload}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progress</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <Progress value={uploadProgress} className="h-2" />
-            </div>
+            <Progress value={uploadProgress} max={100} />
           </div>
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

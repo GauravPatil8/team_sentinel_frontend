@@ -1,6 +1,7 @@
 // Base URL for API requests
 const API_BASE_URL = "http://localhost:5000/api"
 import axios from "axios";
+import { Buffer } from "buffer"; 
 // Authentication APIs
 export const authApi = {
   // Customer authentication
@@ -84,29 +85,41 @@ export const printRequestApi = {
   // Create a new print request
   createPrintRequest: async (
     data: {
-      customerId: string
-      shopkeeperId?: string
-      encryptedFiles: string[]
-      fileNames: string[]
-      pages: string
-      copies: number
+      customerId: string;
+      shopkeeperId?: string;
+      encryptedFiles: ArrayBuffer[];
+      fileNames: string[];
+      pages: string;
+      copies: number;
+      aesKey: string;
+      aesIv: string;
     },
-    token: string,
+    token: string
   ) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/print-requests`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      })
+      // ✅ Convert encrypted files to Base64 before sending
+      const encryptedFilesBase64 = data.encryptedFiles.map((file) =>
+        Buffer.from(file).toString("base64")
+      );
 
-      return await response.json()
+      const response = await axios.post(
+        `${API_BASE_URL}/print-requests`,
+        {
+          ...data,
+          encryptedFiles: encryptedFilesBase64, // ✅ Send as Base64
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
     } catch (error) {
-      console.error("Create print request error:", error)
-      throw error
+      console.error("Create print request error:", error);
+      throw error;
     }
   },
 
@@ -162,37 +175,48 @@ export const printRequestApi = {
 },
 
   getSharedDocuments: async (requestId: string) => {
-    try{
-      const response = await axios.get(`${API_BASE_URL}/share/${requestId}`);
-      return response.data;
-    } catch (error) {
-      console.log("error in shared documents", error);
-      throw error;
+  try {
+    const response = await axios.get(`${API_BASE_URL}/share/${requestId}`);
+    
+    if (response.data && response.data.encryptedFiles) {
+      // Ensure the response contains encrypted files
+      return response.data.encryptedFiles.map((file: string) =>
+        Buffer.from(file, "base64").toString("utf-8") // Convert Base64 to UTF-8 for frontend processing
+      );
     }
-  },
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching shared documents:", error);
+    throw error;
+  }
+},
+
 
 }
 
 
 // Shop APIs
 export const shopApi = {
-  // Get nearby shops
   getNearbyShops: async (location: { lat: number; lng: number }, token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/shops/nearby?lat=${location.lat}&lng=${location.lng}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      return await response.json()
+      const response = await fetch(
+        `${API_BASE_URL}/nearby-shops?lat=${location.lat}&lng=${location.lng}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return await response.json();
     } catch (error) {
-      console.error("Get nearby shops error:", error)
-      throw error
+      console.error("Get nearby shops error:", error);
+      throw error;
     }
   },
-}
+};
+
 
 // Document history APIs
 export const documentApi = {
