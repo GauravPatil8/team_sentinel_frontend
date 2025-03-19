@@ -9,6 +9,7 @@ export const authApi = {
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/signup/customer`, data, {
         headers: { "Content-Type": "application/json" },
+        withCredentials: true
       });
       console.log(response.data)
       return response.data; 
@@ -26,6 +27,7 @@ export const authApi = {
         headers: {
           "Content-Type": "application/json",
         },
+        withCredentials: true
       });
       console.log(response);
       return response.data;
@@ -46,15 +48,14 @@ export const authApi = {
     location?: number[]
   }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/signup/shopkeeper`, {
-        method: "POST",
+      const response = await axios.post(`${API_BASE_URL}/auth/signup/shopkeeper`, data ,{
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        withCredentials: true
       })
 
-      return response.json()
+      return response.data
     } catch (error) {
       console.error("Shopkeeper signup error:", error)
       throw error
@@ -63,15 +64,14 @@ export const authApi = {
 
   shopkeeperLogin: async (data: { email: string; password: string }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login/shopkeeper`, {
-        method: "POST",
+      const response = await axios.post(`${API_BASE_URL}/auth/login/shopkeeper`, data,{
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        withCredentials: true
       })
 
-      return response.json()
+      return response.data
     } catch (error) {
       console.error("Shopkeeper login error:", error)
       throw error

@@ -12,13 +12,15 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 
 import { usePrintRequest } from "@/lib/printRequestContext";
+import axios from "axios";
+
+const { getSharedDocuments } = usePrintRequest()
+const API_BASE_URL = "http://localhost:5000";
 // Mock data for the request
 const mockRequest = {
-  id: "req-123456",
-  sender: "John Doe",
-  email: "john@example.com",
+  customerName: "John Doe",
   status: "pending", // pending, approved, printed
-  files: [
+  filesInfo: [
     {
       id: 1,
       name: "Invoice-2023.pdf",
@@ -34,7 +36,7 @@ const mockRequest = {
       size: "0.5 MB",
     },
   ],
-  totalPages: 7,
+  pages: 7,
   createdAt: "2023-12-20T10:30:00Z",
   expiresAt: "2023-12-21T10:30:00Z",
 }
@@ -47,23 +49,21 @@ const mockPrinters = [
 ]
 
 export default function ShareRequestPage() {
-
-    const params = useParams()
-    const requestId = params.requestId as string
-    const { toast } = useToast()
     
+    const { toast } = useToast()
+    const { requestId } = useParams() as { requestId: string }
     const [request, setRequest] = useState(mockRequest)
     const [printMode, setPrintMode] = useState("bw")
     const [selectedPrinter, setSelectedPrinter] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [timeLeft, setTimeLeft] = useState("")
     
-    const { getSharedDocuments } = usePrintRequest();
   useEffect(()=> {
     async function fetchPrintRequests() {
         try {
           const data = await getSharedDocuments(requestId);
           setRequest(data);
+          console.log(data)
         } catch (error) {
           console.error("Error fetching print requests:", error);
         }
@@ -72,12 +72,12 @@ export default function ShareRequestPage() {
   }, []);
 
   useEffect(() => {
-    // Calculate time left until expiration
+    
     const calculateTimeLeft = () => {
       const expiresAt = new Date(request.expiresAt).getTime()
-      const now = new Date().getTime()
+      const now = Date.now()
       const difference = expiresAt - now
-
+      console.log(difference)
       if (difference > 0) {
         const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
         const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
@@ -100,7 +100,7 @@ export default function ShareRequestPage() {
     setTimeout(() => {
       setRequest({
         ...request,
-        status: "approved",
+        status: "Approved",
       })
       setIsLoading(false)
       toast({
@@ -110,7 +110,7 @@ export default function ShareRequestPage() {
     }, 1500)
   }
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!selectedPrinter) {
       toast({
         title: "No printer selected",
@@ -119,23 +119,42 @@ export default function ShareRequestPage() {
       })
       return
     }
-
+  
     setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setRequest({
-        ...request,
-        status: "printed",
+  
+    try {
+      // Simulate an API call for printing
+      const response = await axios.post(`${API_BASE_URL}/api/print`, {
+        requestId,
+        printer: selectedPrinter,
+        printMode,
       })
-      setIsLoading(false)
+  
+      if (response.data.success) {
+        setRequest((prev) => ({ ...prev, status: "printed" }))
+        toast({
+          title: "Documents printed",
+          description: "The documents have been sent to the printer",
+        })
+      } else {
+        toast({
+          title: "Printing failed",
+          description: "Something went wrong, please try again",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Printing error:", error)
       toast({
-        title: "Documents printed",
-        description: "The documents have been sent to the printer",
+        title: "Printing error",
+        description: "Failed to send the print job",
+        variant: "destructive",
       })
-    }, 2000)
+    } finally {
+      setIsLoading(false)
+    }
   }
-
+  
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -145,7 +164,7 @@ export default function ShareRequestPage() {
             <span className="text-xl font-bold">Sentinel</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">Secure Document Sharing</span>
+            <span className="text-sm font-medium">Secure Document Printing</span>
           </div>
         </div>
       </header>
@@ -154,9 +173,9 @@ export default function ShareRequestPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl">Print Request #{requestId}</CardTitle>
+                <CardTitle className="text-2xl">Print Request By {request.customerName} </CardTitle>
                 <CardDescription>
-                  Documents shared by {request.sender} ({request.email})
+                  Request Id : {requestId}
                 </CardDescription>
               </div>
               <div className="text-right">
@@ -189,7 +208,7 @@ export default function ShareRequestPage() {
                   <div>Copies</div>
                   <div>Size</div>
                 </div>
-                {request.files.map((file) => (
+                {request.filesInfo.map((file) => (
                   <div key={file.id} className="grid grid-cols-4 gap-4 border-b p-4 last:border-0">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
@@ -208,7 +227,7 @@ export default function ShareRequestPage() {
               <div className="space-y-3 rounded-md border p-4">
                 <div className="grid grid-cols-2">
                   <div className="text-sm font-medium">Total Pages:</div>
-                  <div>{request.totalPages}</div>
+                  <div>{request.pages}</div>
                 </div>
                 <div className="grid grid-cols-2">
                   <div className="text-sm font-medium">Link Expires:</div>
@@ -259,11 +278,11 @@ export default function ShareRequestPage() {
           <Separator />
           <CardFooter className="flex justify-between p-6">
             <div className="text-sm text-muted-foreground">This link will expire after printing or in {timeLeft}</div>
-            {request.status === "pending" ? (
+            {request.status === "Pending" ? (
               <Button onClick={handleRequestAccess} disabled={isLoading}>
                 {isLoading ? "Processing..." : "Request Access"}
               </Button>
-            ) : request.status === "approved" ? (
+            ) : request.status === "Approved" ? (
               <Button onClick={handlePrint} disabled={isLoading || !selectedPrinter}>
                 <Printer className="mr-2 h-4 w-4" />
                 {isLoading ? "Printing..." : "Print Documents"}
@@ -280,3 +299,4 @@ export default function ShareRequestPage() {
     </div>
   )
 }
+

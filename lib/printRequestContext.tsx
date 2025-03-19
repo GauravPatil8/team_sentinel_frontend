@@ -115,9 +115,10 @@ export const PrintRequestProvider = ({ children }: { children: ReactNode }) => {
 
   const getSharedDocuments = async (requestId: string) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/share/${requestId}`);
-
-      if(!response) throw new Error("No Request Found");
+      const response = await axios.get(`${API_BASE_URL}/api/share/${requestId}`, {
+        withCredentials: true,  
+      });
+      if (!response) throw new Error("No Request Found");
 
       return await response.data;
     } catch (error) {
