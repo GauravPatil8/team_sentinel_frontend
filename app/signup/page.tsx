@@ -48,7 +48,7 @@ export default function SignupPage() {
 
   const { customerSignup, shopkeeperSignup, isLoading, error } = useAuth();
 
-  // ✅ Handle Input Change (Fixes Checkbox Issue)
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
     setFormData((prev) => ({
@@ -57,7 +57,7 @@ export default function SignupPage() {
     }));
   };
 
-  // ✅ Separate Checkbox Handler (Fixes `onCheckedChange` Issues)
+  
   const handleCheckboxChange = (checked: boolean) => {
     setFormData((prev) => ({
       ...prev,
@@ -66,8 +66,8 @@ export default function SignupPage() {
   };
 
   const handleNextStep = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // ✅ Prevent form submission
-    console.log("Moving to Step 2"); // ✅ Debugging
+    e.preventDefault(); 
+    console.log("Moving to Step 2"); 
     setStep(2);
   };
   
@@ -77,49 +77,57 @@ export default function SignupPage() {
   };
   
 
-  // ✅ Handle Form Submission (Prevents Server-Side Execution)
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    console.log("Submit function called, Role:", role);
-    console.log("Form Data:", formData);
+  
     if (typeof window === "undefined") {
-      console.error("❌ Prevented execution on server!");
+      console.error(" Prevented execution on server!");
       return;
     }
-
+  
     try {
       if (role === "customer") {
         const name = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-        console.log("🚀 Customer Sign-up Data:", { name, email: formData.email });
-
-        const response = await customerSignup(name, formData.email, formData.password);
-        console.log("✅ Customer signed up successfully:", response);
-
+        await customerSignup(name, formData.email, formData.password);
       } else {
         const name = `${formData.firstName} ${formData.lastName}`;
-        const location = [0, 0];
-
-        console.log("🚀 Shopkeeper Sign-up Data:", { name, email: formData.email });
-
-        const response = await shopkeeperSignup({
-          name,
-          email: formData.email,
-          password: formData.password,
-          shopName: formData.shopName,
-          address: `${formData.shopAddress}, ${formData.shopCity}, ${formData.shopState} ${formData.shopZip}`,
-          services: formData.shopDescription ? [formData.shopDescription] : undefined,
-          location,
-        });
-
-        console.log("✅ Shopkeeper signed up successfully:", response);
+        const address = `${formData.shopAddress}, ${formData.shopCity}, ${formData.shopState} ${formData.shopZip}`;
+  
+        
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            
+            const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
+  
+            
+            const location = {
+              type: "Point",
+              coordinates, 
+            };
+  
+            console.log(" Shopkeeper Location Fetched:", location);
+  
+            
+            await shopkeeperSignup({
+              name,
+              email: formData.email,
+              password: formData.password,
+              shopName: formData.shopName,
+              address,
+              services: formData.shopDescription ? [formData.shopDescription] : [],
+              location, 
+            });
+          },
+          (error) => {
+            console.error(" Location Fetch Error:", error);
+          }
+        );
       }
     } catch (error) {
-      console.error("❌ Signup Error:", error);
+      console.error(" Signup Error:", error);
     }
   };
-
-
+  
   return (
     <div className="flex min-h-screen">
       {/* Left Panel - Branding */}

@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
+import { PrintRequestProvider } from "@/lib/printRequestContext"; // ✅ Import the provider
 import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -16,14 +17,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   if (!isMounted) {
-    return <html lang="en"><body className={inter.className} /></html>;
+    return (
+      <html lang="en">
+        <body className={inter.className} />
+      </html>
+    );
   }
 
   return (
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <PrintRequestProvider> {/* ✅ Wrap here */}
+              {children}
+            </PrintRequestProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
