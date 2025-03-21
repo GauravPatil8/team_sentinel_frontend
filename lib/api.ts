@@ -87,32 +87,48 @@ export const printRequestApi = {
     data: {
       customerId: string;
       shopkeeperId?: string;
-      encryptedFiles: ArrayBuffer[];
-      fileNames: string[];
-      pages: string;
-      copies: number;
-      aesKey: string;
-      aesIv: string;
+      filesInfo: {
+        id: string;
+        name: string;
+        pages: number;
+        size: string;
+        copies: number;
+      }[];
+      encryptedData: Buffer[];
+      pages: string;  
     },
     token: string
   ) => {
     try {
-      // ✅ Convert encrypted files to Base64 before sending
-      const encryptedFilesBase64 = data.encryptedFiles.map((file) =>
-        Buffer.from(file).toString("base64")
-      );
+      console.log("Creating print request with data:", data);
+
+      // Convert encrypted files to base64
+      // const filesInfo = data.encryptedFdata.map((file, index) => ({
+      //   id: index + 1, 
+      //   name: data.fileNames[index], 
+      //   data: Buffer.from(file), 
+      //   pages: data.pages[index], 
+      //   size: data.sizes[index], 
+      //   copies: data.copies[index], 
+      // }));
+
+      const requestData = {
+        customerId: data.customerId,
+        shopkeeperId: data.shopkeeperId || null,
+        filesInfo: data.filesInfo,
+        encryptedData: data.encryptedData,
+        pages: data.pages
+      };
 
       const response = await axios.post(
         `${API_BASE_URL}/print-requests`,
-        {
-          ...data,
-          encryptedFiles: encryptedFilesBase64, // ✅ Send as Base64
-        },
+        requestData,
         {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+          withCredentials: true
         }
       );
 
@@ -143,14 +159,15 @@ export const printRequestApi = {
   // Get print requests for a user
   getUserPrintRequests: async (userId: string, token: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/print-requests/user/${userId}`, {
-        method: "GET",
+      const response = await axios.get(`${API_BASE_URL}/print-requests/user/${userId}`, {
+        
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        withCredentials: true
       })
-
-      return await response.json()
+      console.log(response.data)
+      return response.data
     } catch (error) {
       console.error("Get user print requests error:", error)
       throw error
@@ -217,7 +234,24 @@ export const shopApi = {
   },
 };
 
+export const whatsappApi = {
+  sendMessage: async (shopkeeperNumber: string, shareLink: string) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/whatsapp/send-whatsapp`, {shopkeeperNumber, shareLink} {
+        
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true,
+      });
 
+      const result = await response.data;
+      console.log("API Response:", result); 
+      return result;
+    } catch (error) {
+      console.error("WhatsApp message error:", error);
+      throw error;
+    }
+  },
+};
 // Document history APIs
 export const documentApi = {
   // Get document history for a user

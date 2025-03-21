@@ -2,9 +2,8 @@
 
 import { useEffect,useState, useRef, Dispatch, SetStateAction } from "react"
 import Image from "next/image"
-import { X, Upload, Shield, MapPin } from "lucide-react"
+import { X, Upload, Shield, MapPin, Check } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-import { encryptFile } from "../../utils/encrypt"; // ✅ Fix import
 import { printRequestApi } from "@/lib/api"
 import { usePrintRequest } from "@/lib/printRequestContext";
 import { Button } from "@/components/ui/button"
@@ -25,9 +24,78 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { v4 as uuidv4 } from "uuid"
+import axios from "axios"
+import { AlertCircle, Clipboard } from "lucide-react";
+import io from "socket.io-client";
+import crypto from "crypto";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+let encryptedFiles: Buffer[];
+let encryptedBuffer: Buffer;
+let customerPublicKey: string;
+let confirmationOpen = false
+// let aesKey: Buffer, iv: Buffer;
+export let aesKey: Buffer = crypto.randomBytes(32); // AES-256 requires a 32-byte key
+export let iv: Buffer = crypto.randomBytes(16); 
+let shop_Id: string;
+const ecdh = crypto.createECDH("secp256k1");
+ecdh.generateKeys();
+customerPublicKey = ecdh.getPublicKey().toString("base64");
+import EventEmitter from "events";
+import ScanWhatsApp from "./scan-whatsapp"
+const eventEmitter = new EventEmitter();
+const secondEmitter = new EventEmitter();
+let response;
+    
+const socket = io("http://localhost:5000", {
+  transports: ["websocket"], // Force WebSocket transport
+  reconnectionAttempts: 5,   // Try reconnecting 5 times
+  timeout: 5000              // Set timeout for connection
+});
 
+socket.on("connect", () => {
+  console.log("Connected to WebSocket server!");
+});
 
+// const handleShopKeeperKey = async ({
+//   public_key,
+//   shopId,
+// }: { public_key: string, shopId: string }) => {
+//   const sharedSecret = ecdh.computeSecret(Buffer.from(public_key, "base64"));
+//   shop_Id = shopId
+  
+//   const cipher = crypto.createCipheriv("aes-256-gcm", sharedSecret.subarray(0, 32), iv);
+//   let encryptedData = cipher.update(Buffer.concat([aesKey, iv]));
+//   encryptedData = Buffer.concat([encryptedData, cipher.final()]);
+
+//   const authTag = cipher.getAuthTag();
+//   encryptedBuffer = Buffer.concat([encryptedData, iv, authTag]);
+  
+//   socket.emit("customer_encrypted_key", {
+//     publicKey: customerPublicKey,  // Send customer's public key
+//     encryptedData: encryptedBuffer.toString("base64"),
+//     shop_Id
+// });
+// };
+
+socket.on("shopKeeperKey", (data)=>{
+  console.log("customer socket hit")
+  const sharedSecret = ecdh.computeSecret(Buffer.from(data.publicKey, "base64"));
+  shop_Id = data.shopId
+  
+  const cipher = crypto.createCipheriv("aes-256-gcm", sharedSecret.subarray(0, 32), iv);
+  let encryptedData = cipher.update(Buffer.concat([aesKey, iv]));
+  encryptedData = Buffer.concat([encryptedData, cipher.final()]);
+
+  const authTag = cipher.getAuthTag();
+  encryptedBuffer = Buffer.concat([encryptedData, iv, authTag]);
+  confirmationOpen = true
+  eventEmitter.emit("confirmEncryption");
+});
+// socket.emit("customer_encrypted_key", {
+//   customerPublicKey: customerPublicKey,  // Send customer's public key
+//   encryptedData: encryptedBuffer.toString("base64"),
+//   shop_Id
+// });
 interface FileSettings {
   copies: number
   paperSize: "a4" | "letter" | "legal" | "a3"
@@ -72,68 +140,93 @@ export function UploadDialog({ open, onOpenChange, selectedFiles, setSelectedFil
   const [selectedShop, setSelectedShop] = useState<string | null>(null);
   const { user } = useAuth();
   const { getNearbyShops } = usePrintRequest();
+  const [accessRequested, setAccessRequested] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showApiModal, setApiModal] = useState(false);
+  // useEffect(() => {
+  //   if (open && user) {
+  //     fetchNearbyShops();
+  //   }
+  // }, [open, user]);
 
-  useEffect(() => {
-    if (open && user) {
-      fetchNearbyShops();
-    }
-  }, [open, user]);
-
-  const fetchNearbyShops = async () => {
-    if (!user?.id) {
-      setError("User not authenticated.");
-      return;
-    }
+  // const fetchNearbyShops = async () => {
+  //   if (!user?.id) {
+  //     setError("User not authenticated.");
+  //     return;
+  //   }
   
-    try {
-      // Simulate getting user location dynamically
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const location = { lat: position.coords.latitude, lng: position.coords.longitude };
-          console.log("Fetching shops for location:", location);
+  //   try {
+  //     // Simulate getting user location dynamically
+  //     navigator.geolocation.getCurrentPosition(
+  //       async (position) => {
+  //         const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+  //         console.log("Fetching shops for location:", location);
   
-          const shops = await getNearbyShops(location, user.token);
-          console.log("Shops fetched:", shops);
+  //         const shops = await getNearbyShops(location, user.token);
+  //         console.log("Shops fetched:", shops);
   
-          if (!shops || shops.length === 0) {
-            setError("No nearby shops found.");
-            return;
-          }
+  //         if (!shops || shops.length === 0) {
+  //           setError("No nearby shops found.");
+  //           return;
+  //         }
   
-          setNearbyShops(shops);
-        },
-        (error) => {
-          setError("Failed to get user location.");
-          console.error(error);
-        }
-      );
-    } catch (error) {
-      console.error("Error fetching nearby shops:", error);
-      setError("Failed to fetch nearby shops.");
-    }
-  };
+  //         setNearbyShops(shops);
+  //       },
+  //       (error) => {
+  //         setError("Failed to get user location.");
+  //         console.error(error);
+  //       }
+  //     );
+  //   } catch (error) {
+  //     console.error("Error fetching nearby shops:", error);
+  //     setError("Failed to fetch nearby shops.");
+  //   }
+  // };
   
   
   
 
   
 
-  const encryptSelectedFiles = async (): Promise<
-  { id: string; name: string; encryptedData: ArrayBuffer }[]
-> => {
-  return await Promise.all(
-    selectedFiles.map(async (file) => {
-      const encrypted = await encryptFile(file.file);
-      return { id: file.id, name: file.name, encryptedData: encrypted.encryptedData };
-    })
-  );
-};
+//   const encryptSelectedFiles = async (): Promise<
+//   { id: string; name: string; encryptedData: ArrayBuffer }[]
+// > => {
+//   return await Promise.all(
+//     selectedFiles.map(async (file) => {
+//       const encrypted = await encryptFile(file.file);
+//       return { id: file.id, name: file.name, encryptedData: encrypted.encryptedData };
+//     })
+//   );
+// };
 
+    useEffect(() => {
+      const handler2 = () => {
+        setApiModal(true);
+      };
+      secondEmitter.on("getShareLink", handler2);
+
+      return () => {
+        secondEmitter.off("getShareLink", handler2); // Correct cleanup function
+      };
+    }, []);
+
+    useEffect(() => {
+      const handler = () => {
+        
+        setShowModal(true);
+      };
+
+      eventEmitter.on("confirmEncryption", handler);
+
+      return () => {
+        eventEmitter.off("confirmEncryption", handler); // Correct cleanup function
+      };
+    }, []);
 
 const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
   if (e.target.files?.length) {
-    const filesArray: SelectedFile[] = Array.from(e.target.files).map((file) => ({
-      id: uuidv4(),
+    const filesArray: SelectedFile[] = Array.from(e.target.files).map((file, index) => ({
+      id: (index + 1).toString(),
       name: file.name,
       size: file.size,
       type: file.type,
@@ -162,8 +255,8 @@ const handleShopSelect = (newValue: string) => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files.length > 0) {
-      const filesArray: SelectedFile[] = Array.from(e.dataTransfer.files).map((file) => ({
-        id: uuidv4(),
+      const filesArray: SelectedFile[] = Array.from(e.dataTransfer.files).map((file, index) => ({
+        id: (index + 1).toString(),
         name: file.name,
         size: file.size,
         type: file.type,
@@ -182,7 +275,14 @@ const handleShopSelect = (newValue: string) => {
     }
   };
   
-
+  const fileToBuffer = (file: File): Promise<Buffer> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(Buffer.from(reader.result as ArrayBuffer));
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  };
   const updateFileSettings = (fileId: string, key: keyof FileSettings, value: any) => {
     setSelectedFiles((prevFiles) =>
       prevFiles.map((file) =>
@@ -194,37 +294,77 @@ const handleShopSelect = (newValue: string) => {
   const removeFile = (fileId: string) => {
     setSelectedFiles((prevFiles) => prevFiles.filter((file) => file.id !== fileId));
   };
+  const handleConfirm = ()=>{
+    socket.emit("customer_encrypted_key", {
+      customerPublicKey: customerPublicKey,  // Send customer's public key
+      encryptedData: encryptedBuffer.toString("base64"),
+      shop_Id
+    });
+    setShowModal(false)
+  }
 
   const handleUpload = async () => {
+    
     if (!user) {
       setError("User not authenticated.");
       return;
     }
-    if (!selectedShop) {
-      setError("Please select a print shop before uploading.");
-      return;
-    }
+    socket.emit("register", {userId: user.id})
+    // if (!selectedShop) {
+    //   setError("Please select a print shop before uploading.");
+    //   return;
+    // }
 
     setIsUploading(true);
     setError(null);
 
     try {
-      const encryptedFiles = await encryptSelectedFiles();
+      
+      const filesInfo = selectedFiles.map((file) => ({
+        id: file.id, 
+        name: file.name,
+        pages: file.settings.pages === "all" ? 1 : parseInt(file.settings.pages, 10), 
+        size: file.size.toString(), // Convert size to string
+        copies: file.settings.copies,
+      }));
+    
+      
+      // const encryptedFiles = await Promise.all(
+      //   selectedFiles.map(async (file) => {
+      //     const arrayBuffer = await file.file.arrayBuffer(); // Convert file to ArrayBuffer
+      //     return Buffer.from(arrayBuffer); // Convert to Buffer
+      //   })
+      // );
+      // aesKey = crypto.randomBytes(32); // AES-256 Key
+      // iv = crypto.randomBytes(16); // IV for AES-GCM
 
-      await printRequestApi.createPrintRequest(
+      console.log("Generated AES Key:", aesKey.toString("hex"));
+      console.log("Generated IV:", iv.toString("hex"));
+      const fileBuffers = await Promise.all(
+        selectedFiles.map((file) => fileToBuffer(file.file))
+      );
+      console.log(fileBuffers)
+      encryptedFiles = fileBuffers.map((fileBuffer) => {
+        const cipher = crypto.createCipheriv("aes-256-gcm", aesKey, iv);
+        const encryptedData = Buffer.concat([cipher.update(fileBuffer), cipher.final()]);
+        return encryptedData; 
+      });
+      // encryptedFiles = encryptFiles(aesKey, iv, fileBuffers);
+      console.log(`encrypted documents: ${encryptedFiles}`)
+      const totalPages = filesInfo.reduce((sum, file) => sum + file.pages, 0).toString();
+      response = await printRequestApi.createPrintRequest(
         {
           customerId: user.id,
-          shopkeeperId: selectedShop,
-          encryptedFiles: encryptedFiles.map((file) => file.encryptedData),
-          fileNames: encryptedFiles.map((file) => file.name),
-          pages: "all",
-          copies: 1,
-          aesKey: "",
-          aesIv: ""
+          shopkeeperId: selectedShop || undefined,
+          filesInfo: filesInfo, // Matches Mongoose schema
+          encryptedData: encryptedFiles, // Array of Buffers
+          pages: totalPages, // Assuming global setting
         },
         user.token
       );
-
+    console.log(`print Request: ${response.requestId}`)
+      
+      secondEmitter.emit("getShareLink");
       const interval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 100) {
@@ -243,7 +383,7 @@ const handleShopSelect = (newValue: string) => {
       setError("Failed to upload files. Please try again.");
       setIsUploading(false);
     }
-  };
+  }
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -322,9 +462,6 @@ const handleShopSelect = (newValue: string) => {
 {/* ✅ END */}
 
 
-
-
-  
         {!isUploading ? (
           <>
             <div
@@ -523,7 +660,7 @@ const handleShopSelect = (newValue: string) => {
                 ))}
               </Accordion>
             )}
-  
+            
             <DialogFooter className="flex justify-between mt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Shield className="h-4 w-4 text-primary" />
@@ -544,14 +681,159 @@ const handleShopSelect = (newValue: string) => {
           <div className="py-8 space-y-6">
             <div className="flex items-center justify-between">
               <span className="text-lg font-semibold">Uploading...</span>
-              <Button variant="ghost" size="sm" onClick={handleUpload}>
-                <X className="h-4 w-4" />
-              </Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        {accessRequested ? (
+          <Button onClick={handleAccess} variant="default">
+            <Check className="mr-2 h-4 w-4" />
+            Grant Access
+          </Button>
+        ) : (
+          <Button onClick={handleUpload} disabled={selectedFiles.length === 0}>
+            <Shield className="mr-2 h-4 w-4" />
+            Send to Print Shop
+          </Button>
+        )}
             </div>
             <Progress value={uploadProgress} max={100} />
           </div>
         )}
+        
       </DialogContent>
+      {showApiModal && (
+  <ApiConfirmationModal
+    open={showApiModal}
+    onCancel={() => setApiModal(false)}
+  />
+)}
+
+{showModal && (
+  <ConfirmationModal 
+    open={showModal}
+    onConfirm={handleConfirm}
+    onCancel={() => setShowModal(false)}
+  />
+)}
+
     </Dialog>
+    
   );
-}
+  };
+  function ConfirmationModal({ open, onConfirm, onCancel }) {
+    return (
+      <Dialog open={open} onOpenChange={onCancel}>
+        <DialogContent className="sm:max-w-[400px] text-center">
+          <DialogHeader>
+            <AlertCircle className="w-10 h-10 mx-auto text-red-500" />
+            <DialogTitle>Confirm Print Request</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600">Do you want to allow the shopkeeper to print your files?</p>
+          <DialogFooter className="flex justify-center gap-4 mt-4">
+            <Button variant="outline" onClick={onCancel} className="w-24">
+              Cancel
+            </Button>
+            <Button onClick={onConfirm} className="w-24">
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  function ApiConfirmationModal({ open, onCancel }) {
+    const [loading, setLoading] = useState(false);
+    const [responseComp, setResponse] = useState({
+      success: true,
+      shareLink: ""
+    });
+    const [copied, setCopied] = useState(false);
+    const [showScanner, setShowScanner] = useState(false); 
+  
+    async function handleFetch() {
+      if (!open) return; // Prevent unnecessary API calls when the modal is closed
+      setLoading(true);
+      try {
+        console.log("component called")
+        const res = await axios.get(`http://localhost:5000/api/print-requests/share/${response.requestId}`, {
+          withCredentials: true,
+        });
+        setResponse(res.data); // Assuming response contains { shareLink: "..." }
+      } catch (error) {
+        console.error("API error:", error);
+      }
+      setLoading(false);
+    }
+  
+    function copyToClipboard() {
+      if (!responseComp?.shareLink) return;
+      navigator.clipboard.writeText(responseComp.shareLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  
+    useEffect(() => {
+      if (open) {
+        handleFetch();
+      }
+    }, [open]); // Fetch data when modal opens
+  
+    return (
+      <>
+      <Dialog open={open} onOpenChange={onCancel}>
+        <DialogContent className="sm:max-w-[500px] text-center">
+          <DialogHeader>
+            <AlertCircle className="w-10 h-10 mx-auto text-blue-500" />
+            <DialogTitle>Fetch Print Status</DialogTitle>
+          </DialogHeader>
+  
+          <p className="text-gray-600">Shareable Link</p>
+  
+          {loading ? (
+            <p className="text-gray-500 mt-4">Fetching data...</p>
+          ) : responseComp ? (
+            <div className="mt-4">
+              <input
+                type="text"
+                readOnly
+                value={responseComp.shareLink || "No link available"}
+                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              />
+            </div>
+          ) : (
+            <p className="text-red-500 mt-4">Failed to fetch data.</p>
+          )}
+  
+          <DialogFooter className="flex justify-center gap-4 mt-4">
+            {responseComp && (
+              <Button onClick={copyToClipboard} className="w-32 flex items-center justify-center">
+                {copied ? <Check className="w-4 h-4 mr-2" /> : <Clipboard className="w-4 h-4 mr-2" />}
+                {copied ? "Copied" : "Copy Link"}
+              </Button>
+            )}
+  
+            <Button variant="outline" onClick={onCancel} className="w-24 flex items-center justify-center">
+              <X className="w-4 h-4 mr-2" />
+              Close
+            </Button>
+            <Button onClick={() => setShowScanner(true)}>
+                            Share
+                        </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {showScanner && (
+                <Dialog open={showScanner} onOpenChange={() => setShowScanner(false)}>
+                    <DialogContent>
+                      <VisuallyHidden>
+                        
+                        <DialogTitle>Scan WhatsApp QR Code</DialogTitle>
+                       
+                      </VisuallyHidden>
+                        <ScanWhatsApp shareLink={ responseComp.shareLink}/>
+                    </DialogContent>
+                </Dialog>
+            )}
+      </>
+    );
+  }

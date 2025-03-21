@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CustomerDashboardHeader } from "@/components/dashboard/customer/dashboard-header";
 import { CustomerSidebar } from "@/components/dashboard/customer/sidebar";
-import { QuickStats } from "@/components/dashboard/customer/quick-stats";
 import { QuickUpload } from "@/components/dashboard/customer/quick-upload";
 import { RecentDocuments } from "@/components/dashboard/customer/recent-documents";
 import { UploadDialog } from "@/components/dashboard/customer/upload-dialog";
@@ -35,11 +34,9 @@ export default function CustomerDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <h1 className="text-3xl font-bold">Welcome, {user?.name} 👋</h1>
-              
+              <h1 className="text-3xl font-bold">{user?.name}</h1>
             </motion.div>
 
-            <QuickStats />
             <QuickUpload
               onUploadClick={() => setShowUploadDialog(true)}
               onCameraClick={() => setShowCameraDialog(true)}

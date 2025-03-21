@@ -14,11 +14,11 @@ interface PrintRequestContextType {
       filesInfo: {
         id: number;
         name: string;
-        data: Buffer; // Base64 or encrypted data
         pages: number;
         size: string;
         copies: number;
       }[];
+      encryptedData: Buffer[];
       pages: string;
       expiresAt: Date;
     },
@@ -29,7 +29,7 @@ interface PrintRequestContextType {
   getUserPrintRequests: (userId: string, token: string) => Promise<any>;
   getShareLink: (requestId: string, token: string) => Promise<any>;
   getSharedDocuments: (requestId: string) => Promise<any>;
-  getNearbyShops: (location: { lat: number; lng: number }, token: string) => Promise<any>; // ✅ Added function for fetching nearby shops
+  getNearbyShops: (location: { lat: number; lng: number }, token: string) => Promise<any>; 
 }
 
 const PrintRequestContext = createContext<PrintRequestContextType | undefined>(undefined);
@@ -43,11 +43,11 @@ export const PrintRequestProvider = ({ children }: { children: ReactNode }) => {
       filesInfo: {
         id: number;
         name: string;
-        data: Buffer; // Base64 or encrypted data
         pages: number;
         size: string;
         copies: number;
       }[];
+      encryptedData: Buffer[]; // Ensuring encrypted data is included
       pages: string;
       expiresAt: Date;
     },
@@ -60,7 +60,7 @@ export const PrintRequestProvider = ({ children }: { children: ReactNode }) => {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
       return await response.data;
     } catch (error) {
       console.error("Create print request error:", error);

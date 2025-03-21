@@ -1,16 +1,23 @@
-export async function encryptFile(file: File): Promise<{ encryptedData: ArrayBuffer; fileName: string }> {
-    const key = await window.crypto.subtle.generateKey(
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["encrypt"]
-    );
-    const iv = window.crypto.getRandomValues(new Uint8Array(12)); // 12-byte IV for AES-GCM
+import crypto from "crypto";
 
-    const encryptedData = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
-        key,
-        await file.arrayBuffer()
-    );
+export const encryptFiles = async (
+  aesKey: Buffer,
+  iv: Buffer,
+  fileBuffers: Buffer[]
+): Promise<Buffer[]> => {
+  if (aesKey.length !== 32) {
+    throw new Error("AES key must be 32 bytes for AES-256-GCM.");
+  }
+  if (iv.length !== 16) {
+    throw new Error("IV must be 16 bytes.");
+  }
 
-    return { fileName: file.name, encryptedData };
-}
+  return Promise.resolve(
+    fileBuffers.map((fileBuffer) => {
+      const cipher = crypto.createCipheriv("aes-256-gcm", aesKey, iv);
+      const encryptedData = Buffer.concat([cipher.update(fileBuffer), cipher.final()]);
+      
+      return Buffer.concat([encryptedData]);
+    })
+  );
+};

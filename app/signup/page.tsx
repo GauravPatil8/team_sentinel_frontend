@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
-import { Printer, Upload, ChevronLeft, ChevronRight, Clock } from "lucide-react"
+import { Shield, Upload, ChevronLeft, ChevronRight, Clock } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
 import { Button } from "@/components/ui/button"
@@ -134,8 +134,8 @@ export default function SignupPage() {
       <div className="hidden md:flex md:w-2/5 bg-primary p-8 flex-col justify-between">
         <div>
           <div className="flex items-center gap-2 text-primary-foreground">
-            <Printer className="h-6 w-6" />
-            <span className="text-xl font-bold">PrintConnect</span>
+          <Shield className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">Sentinel</span>
           </div>
         </div>
         <div className="space-y-6">

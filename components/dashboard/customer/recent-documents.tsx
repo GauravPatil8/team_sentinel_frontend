@@ -11,6 +11,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import crypto from "crypto";
+import io from "socket.io-client";
+let encryptedBuffer: Buffer;
+let customerPublicKey: string;
+let shop_Id: string;
+import { aesKey, iv } from "./upload-dialog";
+const socket = io("http://localhost:5000", {
+  transports: ["websocket"], // Force WebSocket transport
+  reconnectionAttempts: 5,   // Try reconnecting 5 times
+  timeout: 5000              // Set timeout for connection
+});
+
+socket.on("connect", () => {
+  console.log("Connected to WebSocket server!");
+});
+const ecdh = crypto.createECDH("secp256k1");
+ecdh.generateKeys();
+customerPublicKey = ecdh.getPublicKey().toString("base64");
 
 interface PrintRequest {
   _id: string;
@@ -34,7 +52,7 @@ export function RecentDocuments({ viewMode, setViewMode }: RecentDocumentsProps)
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-
+  
   useEffect(() => {
     if (user) {
       fetchDocuments();
@@ -49,26 +67,27 @@ export function RecentDocuments({ viewMode, setViewMode }: RecentDocumentsProps)
   
     try {
       console.log("Fetching documents for user:", user.id);
-  
+    
       const response = await printRequestApi.getUserPrintRequests(user.id, user.token);
       console.log("API Response:", response);
-  
-      if (response.error) {
-        console.error("API Error:", response.error);
-        setError(response.error);
+    
+      if (!Array.isArray(response)) { 
+        console.error("Unexpected API Response:", response);
+        setError("Unexpected API Response");
         return;
       }
-  
-      const pendingDocs = response.printRequests.filter((doc: PrintRequest) => doc.status !== "Printed");
-      const printedDocs = response.printRequests.filter((doc: PrintRequest) => doc.status === "Printed");
-  
-      setDocuments({ all: response.printRequests, pending: pendingDocs, printed: printedDocs });
+    
+      const pendingDocs = response.filter((doc: PrintRequest) => doc.status !== "Printed");
+      const printedDocs = response.filter((doc: PrintRequest) => doc.status === "Printed");
+    
+      setDocuments({ all: response, pending: pendingDocs, printed: printedDocs });
     } catch (err) {
       console.error("Fetch Documents Error:", err);
       setError("Failed to fetch documents. Please try again.");
     } finally {
       setIsLoading(false);
     }
+    
   };
   
 
@@ -155,17 +174,22 @@ interface DocumentCardProps {
 }
 
 function DocumentCard({ doc }: DocumentCardProps) {
+
+  
+
   return (
     <Card key={doc._id} className="hover:shadow-md transition-shadow">
       <CardHeader>
-        <CardTitle>{doc.fileNames?.[0] || "Untitled Document"}</CardTitle>
+        {/* <CardTitle>{doc.fileNames?.[0] || "Untitled Document"}</CardTitle> */}
         <CardDescription>Uploaded {new Date(doc.createdAt).toLocaleDateString()}</CardDescription>
       </CardHeader>
       <CardFooter className="flex justify-between">
         <Badge className={doc.status === "Printed" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}>
           {doc.status === "Printed" ? "Printed" : "Pending"}
         </Badge>
-        <span>{doc.copies} copies</span>
+        
+
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

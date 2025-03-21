@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Printer } from "lucide-react"
+import { Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export function SiteHeader() {
@@ -9,7 +9,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2">
-          <Printer className="h-6 w-6 text-primary" />
+          <Shield className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Sentinel
           </span>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { authApi } from "@/lib/api"
 
 type User = {
-  _id: string
+  _id?: string
   location: { coordinates: number[] }
   services: string[]
   address: string
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
   
       const userData: User = {
-        _id: response._id, // ✅ Ensure _id is included
+        _id: response._id, 
         id: response.id,
         name: response.name,
         email: response.email,
@@ -184,17 +184,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      // const userData = {
-      //   id: response.id,
-      //   name: response.name,
-      //   email: response.email,
-      //   role: "shopkeeper",
-      //   shopName: response.shopName,
-      //   token: response.token,
-      // }
+      const userData : User = {
+        _id: response._id, 
+        id: response.id,
+        name: response.name,
+        email: response.email,
+        role: "shopkeeper",
+        shopName: response.shopName,
+        token: response.token,
+        location: response.location || { coordinates: [0, 0] }, // ✅ Default location
+        services: response.services || [], // ✅ Default empty array
+        address: response.address || "N/A", // ✅ Default value
+      };
 
-      // setUser(userData)
-      // localStorage.setItem("user", JSON.stringify(userData))
+      setUser(userData)
+      localStorage.setItem("user", JSON.stringify(userData))
       router.push("/login")
     } catch (err) {
       setError("Failed to sign up. Please try again.")
